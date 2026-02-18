@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Calendar Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container { height: 450px; }
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .message-animation {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        body { background-color: #f0f2f5; }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Side: Information & Scheduled List -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="bg-indigo-100 p-3 rounded-2xl text-indigo-600">
+                        <i class="fas fa-calendar-check text-xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800">ตารางนัดหมาย</h2>
+                </div>
+                
+                <div id="appointment-list" class="space-y-3">
+                    <!-- Dynamic List -->
+                    <p class="text-gray-400 text-sm text-center py-4">ยังไม่มีนัดหมายในวันนี้</p>
+                </div>
+            </div>
+
+            <div class="bg-indigo-600 p-6 rounded-3xl text-white shadow-lg">
+                <h3 class="font-bold mb-2">เคล็ดลับการนัดหมาย</h3>
+                <p class="text-indigo-100 text-xs leading-relaxed">
+                    คุณสามารถพิมพ์บอกบอทได้เลยว่า "อยากนัดประชุมวันพรุ่งนี้ตอน 10 โมง" บอทจะช่วยแนะนำช่วงเวลาที่เหมาะสมให้ครับ
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Side: Chatbot Interface -->
+        <div class="lg:col-span-8 flex flex-col glass-morphism rounded-3xl shadow-xl overflow-hidden border border-white">
+            <!-- Bot Header -->
+            <div class="bg-white border-b p-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <img src="https://ui-avatars.com/api/?name=Calendar+Bot&background=4f46e5&color=fff" class="w-10 h-10 rounded-full" alt="Bot Avatar">
+                        <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-sm">ผู้ช่วยนัดหมายอัจฉริยะ</h3>
+                        <p class="text-[10px] text-gray-500 uppercase font-semibold">Online | AI Assistant</p>
+                    </div>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+
+            <!-- Messages Window -->
+            <div id="chat-window" class="chat-container overflow-y-auto p-6 space-y-4 bg-gray-50/50">
+                <!-- Bot Welcome -->
+                <div class="flex flex-col items-start message-animation">
+                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 max-w-[85%]">
+                        <p class="text-sm text-gray-700">สวัสดีครับ! ผมเป็นผู้ช่วยจัดการตารางนัดหมายของคุณ ต้องการให้ผมช่วยนัดหมายประชุม นัดกินข้าว หรือตั้งเตือนกิจกรรมอะไรไหมครับ?</p>
+                    </div>
+                    <span class="text-[10px] text-gray-400 mt-1 ml-1">11:00 AM</span>
+                </div>
+            </div>
+
+            <!-- Quick Suggestions -->
+            <div class="px-4 py-2 flex gap-2 overflow-x-auto bg-white/50 border-t border-gray-100">
+                <button onclick="quickAction('นัดประชุมงาน')" class="whitespace-nowrap px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors">📅 นัดประชุมงาน</button>
+                <button onclick="quickAction('นัดทานข้าว')" class="whitespace-nowrap px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors">🍽️ นัดทานข้าว</button>
+                <button onclick="quickAction('เช็คตารางวันนี้')" class="whitespace-nowrap px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors">🔍 เช็คตารางวันนี้</button>
+            </div>
+
+            <!-- Input Form -->
+            <div class="p-4 bg-white border-t border-gray-100">
+                <form id="chat-form" class="flex gap-2">
+                    <input type="text" id="user-input" 
+                        class="flex-1 bg-gray-100 border-none focus:ring-2 focus:ring-indigo-500 rounded-2xl px-5 py-3 text-sm outline-none transition-all" 
+                        placeholder="พิมพ์สิ่งที่ต้องการนัดหมาย..." autocomplete="off">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform active:scale-95">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal (Hidden by Default) -->
+    <div id="booking-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">ยืนยันข้อมูลนัดหมาย</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หัวข้อการนัดหมาย</label>
+                    <input type="text" id="event-title" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">วันที่</label>
+                        <input type="date" id="event-date" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">เวลา</label>
+                        <input type="time" id="event-time" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-8">
+                    <button onclick="closeModal()" class="flex-1 py-3 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-colors">ยกเลิก</button>
+                    <button onclick="confirmAppointment()" class="flex-1 py-3 bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-lg hover:bg-indigo-700 transition-colors">บันทึกลงปฏิทิน</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const appointmentList = document.getElementById('appointment-list');
+        const modal = document.getElementById('booking-modal');
+
+        let appointments = [];
+
+        function addMessage(text, isUser = false) {
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'} message-animation`;
+            
+            messageDiv.innerHTML = `
+                <div class="${isUser ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-700 rounded-tl-none border border-gray-100'} p-4 rounded-2xl shadow-sm max-w-[85%]">
+                    <p class="text-sm">${text}</p>
+                </div>
+                <span class="text-[10px] text-gray-400 mt-1 ${isUser ? 'mr-1' : 'ml-1'}">${timeStr}</span>
+            `;
+            
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function quickAction(action) {
+            userInput.value = action;
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+
+        function processBotResponse(msg) {
+            const input = msg.toLowerCase();
+            let botText = "";
+
+            if (input.includes("นัด") || input.includes("ประชุม") || input.includes("กินข้าว")) {
+                botText = "ได้เลยครับ! ผมพร้อมช่วยนัดหมายให้คุณแล้ว กรุณาระบุรายละเอียดเพิ่มเติมในฟอร์มยืนยันเพื่อบันทึกลงระบบนะครับ";
+                setTimeout(() => openModal(msg), 1000);
+            } else if (input.includes("เช็ค") || input.includes("ตาราง")) {
+                if (appointments.length === 0) {
+                    botText = "ตอนนี้คุณยังไม่มีนัดหมายใดๆ ครับ สบายใจได้เลย!";
+                } else {
+                    botText = `วันนี้คุณมีนัดหมายทั้งหมด ${appointments.length} รายการครับ ดูรายละเอียดได้ที่แถบด้านซ้ายมือได้เลย`;
+                }
+            } else {
+                botText = "ผมสามารถช่วยคุณ 'นัดหมายประชุม' หรือ 'ตรวจสอบตารางงาน' ได้นะครับ ลองพิมพ์บอกผมดูสิ!";
+            }
+
+            setTimeout(() => addMessage(botText), 800);
+        }
+
+        function openModal(initialTitle = "") {
+            document.getElementById('event-title').value = initialTitle;
+            document.getElementById('event-date').valueAsDate = new Date();
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        function confirmAppointment() {
+            const title = document.getElementById('event-title').value;
+            const date = document.getElementById('event-date').value;
+            const time = document.getElementById('event-time').value;
+
+            if (!title || !date || !time) {
+                alert("กรุณากรอกข้อมูลให้ครบถ้วนครับ");
+                return;
+            }
+
+            const appt = { title, date, time, id: Date.now() };
+            appointments.push(appt);
+            renderAppointments();
+            closeModal();
+            addMessage(`บันทึกนัดหมาย "${title}" ในวันที่ ${date} เวลา ${time} เรียบร้อยแล้วครับ! 🗓️`);
+        }
+
+        function renderAppointments() {
+            if (appointments.length === 0) {
+                appointmentList.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">ยังไม่มีนัดหมายในวันนี้</p>';
+                return;
+            }
+
+            appointmentList.innerHTML = appointments.map(appt => `
+                <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-indigo-200 transition-colors group relative">
+                    <h4 class="text-sm font-bold text-gray-800">${appt.title}</h4>
+                    <div class="flex items-center gap-3 mt-1 text-[11px] text-gray-500 font-medium uppercase tracking-wider">
+                        <span><i class="far fa-calendar mr-1"></i> ${appt.date}</span>
+                        <span><i class="far fa-clock mr-1"></i> ${appt.time}</span>
+                    </div>
+                    <button onclick="deleteAppt(${appt.id})" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                        <i class="fas fa-trash-alt text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        window.deleteAppt = function(id) {
+            appointments = appointments.filter(a => a.id !== id);
+            renderAppointments();
+        };
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            addMessage(text, true);
+            userInput.value = '';
+            processBotResponse(text);
+        });
+
+    </script>
+</body>
+</html>
